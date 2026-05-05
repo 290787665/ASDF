@@ -43,6 +43,7 @@ function usage
     echo "  --fft         Initialize the optional FFT accelerator submodule"
     echo "  --radiance    Initialize the optional Radiance accelerator submodule"
     echo "  --gemmini     Initialize the optional Gemmini accelerator submodule"
+    echo "  --sdc         Initialize the optional SDC generator submodules (sdc_renewal, sdc_gen)"
     echo "  --nvdla       Initialize the optional NVDLA accelerator submodule"
     echo "  --cva6        Initialize the optional CVA6 core submodule"
     echo "  --sodor       Initialize the optional Sodor cores submodule"
@@ -67,6 +68,7 @@ ENABLE_SODOR=0
 ENABLE_IBEX=0
 ENABLE_VEXIIRISCV=0
 ENABLE_TACIT=0
+submodule_name=""
 
 while test $# -gt 0
 do
@@ -118,9 +120,9 @@ do
 	--gemmini)
 	    ENABLE_GEMMINI=1
 	    ;;
-    --sdc)
-        ENABLE_SDC=1
-        ;;
+        --sdc)
+            ENABLE_SDC=1
+            ;;
 	--nvdla)
 	    ENABLE_NVDLA=1
 	    ;;
@@ -192,7 +194,9 @@ cd "$RDIR"
 	    generators/caliptra-aes-acc \
 	    generators/compress-acc \
             generators/nvdla \
-	    generators/mempress \
+            generators/mempress \
+            generators/sdc_renewal \
+            generators/sdc_gen \
             generators/gemmini \
             generators/fft-generator \
             generators/radiance \
@@ -295,15 +299,16 @@ cd "$RDIR"
 
     if [[ "$ENABLE_GEMMINI" -eq 1 ]] ; then
         submodule_name="generators/gemmini"
-        git submodule update --init generators/gemmini || exit 1
-        git -C generators/gemmini/ submodule update --init --recursive software/gemmini-rocc-tests || exit 1
+	git submodule update --init generators/gemmini || exit 1
+	git -C generators/gemmini/ submodule update --init --recursive software/gemmini-rocc-tests || exit 1
     fi
 
     if [[ "$ENABLE_SDC" -eq 1 ]] ; then
         submodule_name="generators/sdc_renewal"
-        git submodule update --init generators/sdc_renewal || exit 1
+	git submodule update --init generators/sdc_renewal || exit 1
+	git submodule update --init generators/sdc_gen || exit 1
     fi
-    
+
     # Non-recursive clone
     submodule_name="generators/rocket-chip"
     git submodule update --init generators/rocket-chip || exit 1

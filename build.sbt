@@ -31,6 +31,11 @@ lazy val commonSettings = Seq(
   scalaVersion := scalaVersionFromChisel,
   assembly / test := {},
   assembly / assemblyMergeStrategy := {
+    // Multiple local generators may package these simulation helper C++ sources
+    // with different contents; keep the first to avoid sbt-assembly deduplicate failure.
+    case PathList("csrc", "f_div_sim.cpp") => MergeStrategy.first
+    case PathList("csrc", "f_mul_sim.cpp") => MergeStrategy.first
+    case PathList("csrc", "f_com_sim.cpp") => MergeStrategy.first
     case PathList("chisel3", "stage", xs @ _*) => chiselFirrtlMergeStrategy
     case PathList("chisel", "stage", xs @ _*) => chiselFirrtlMergeStrategy
     case PathList("firrtl", "stage", xs @ _*) => chiselFirrtlMergeStrategy
@@ -228,6 +233,7 @@ lazy val chipyard = {
     "tacit" -> tacit,
     "gemmini" -> gemmini,
     "sdc_renewal" -> sdc_renewal,
+    "sdc_gen" -> sdc_gen,
     "nvdla" -> nvdla,
     "radiance" -> radiance,
     "caliptra-aes-acc" -> caliptra_aes,
@@ -373,6 +379,15 @@ lazy val gemmini = withInitCheck(freshProject("gemmini", file("generators/gemmin
 lazy val sdc_renewal = withInitCheck(freshProject("sdc_renewal", file("generators/sdc_renewal")), "sdc_renewal")
   .dependsOn(rocketchip)
   .settings(libraryDependencies ++= rocketLibDeps.value)
+  .settings(commonSettings)
+
+lazy val sdc_gen = withInitCheck(freshProject("sdc_gen", file("generators/sdc_gen/chisel/RtlGen")), "sdc_gen")
+  .dependsOn(rocketchip)
+  .settings(libraryDependencies ++= rocketLibDeps.value)
+  .settings(libraryDependencies ++= Seq(
+    "com.typesafe.play" %% "play-json" % "2.9.2",
+    "org.reflections" % "reflections" % "0.10.2"
+  ))
   .settings(commonSettings)
 
 lazy val nvdla = withInitCheck((project in file("generators/nvdla")), "nvdla")

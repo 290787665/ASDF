@@ -54,6 +54,40 @@ EXTRA_SIM_SOURCES    ?=
 EXTRA_SIM_REQS       ?=
 EXTRA_SIM_OUT_NAME   ?=
 
+# sdc_gen external SV models required by generated collateral in Verilator builds.
+# Keep this in common.mk so it works even when generators/sdc_gen is a read-only submodule.
+SDC_GEN_VSRC_DIR := $(base_dir)/generators/sdc_gen/chisel/RtlGen/src/main/resources/vsrc
+SDC_GEN_CSRC_DIR := $(base_dir)/generators/sdc_gen/chisel/RtlGen/src/main/resources/csrc
+SDC_GEN_INC_DIR  := $(base_dir)/generators/sdc_gen/chisel/RtlGen/src/main/resources/include
+SDC_GEN_SIM_VSRCS := \
+	$(SDC_GEN_VSRC_DIR)/ip_bram.sv \
+	$(SDC_GEN_VSRC_DIR)/ip_uram.sv \
+	$(SDC_GEN_VSRC_DIR)/ip_add_singlefloat.sv \
+	$(SDC_GEN_VSRC_DIR)/ip_sub_singlefloat.sv \
+	$(SDC_GEN_VSRC_DIR)/ip_mul_singlefloat.sv \
+	$(SDC_GEN_VSRC_DIR)/ip_div_singlefloat.sv \
+	$(SDC_GEN_VSRC_DIR)/ip_com_singlefloat.sv \
+	$(SDC_GEN_VSRC_DIR)/ip_acc_singlefloat.sv \
+	$(SDC_GEN_VSRC_DIR)/fix_to_float.sv \
+	$(SDC_GEN_VSRC_DIR)/cordic_0.sv
+
+SDC_GEN_SIM_CSRCS := \
+	$(SDC_GEN_CSRC_DIR)/f_add_sim.cpp \
+	$(SDC_GEN_CSRC_DIR)/f_sub_sim.cpp \
+	$(SDC_GEN_CSRC_DIR)/f_mul_sim.cpp \
+	$(SDC_GEN_CSRC_DIR)/f_div_sim.cpp \
+	$(SDC_GEN_CSRC_DIR)/f_com_sim.cpp \
+	$(SDC_GEN_CSRC_DIR)/cordic_sim.cpp \
+	$(SDC_GEN_CSRC_DIR)/fix_to_float_sim.cpp
+
+ifneq ($(wildcard $(SDC_GEN_VSRC_DIR)/ip_bram.sv),)
+EXTRA_SIM_REQS += $(SDC_GEN_SIM_VSRCS)
+EXTRA_SIM_SOURCES += $(SDC_GEN_SIM_VSRCS)
+EXTRA_SIM_REQS += $(SDC_GEN_SIM_CSRCS)
+EXTRA_SIM_SOURCES += $(SDC_GEN_SIM_CSRCS)
+EXTRA_SIM_CXXFLAGS += -I$(SDC_GEN_INC_DIR)
+endif
+
 ifneq ($(ASPECTS), )
 	comma = ,
 	ASPECT_ARGS = $(foreach aspect, $(subst $(comma), , $(ASPECTS)), --with-aspect $(aspect))

@@ -186,12 +186,39 @@ conda environment or \`source env.sh\` and skip this step with \`-s 1\`." >&2
         exit_if_last_command_failed
     fi
     SYS_GLIBC=$(ldd --version | awk '/ldd/{print $NF}')
-    DEFAULT_GLIBC=$(grep -i "sysroot_linux-64=" conda-reqs/chipyard-base.yaml | awk -F= '{print $2}')
-    if [ "$SYS_GLIBC" != "$DEFAULT_GLIBC" ]; then
-        # replace the glibc version
-        sed -i.bak "s/^\([[:space:]]*-\s*sysroot_linux-64=\).*/\1$SYS_GLIBC/" conda-reqs/chipyard-base.yaml
-        $CYDIR/scripts/generate-conda-lockfiles.sh
-        exit_if_last_command_failed
+    CURRENT_GLIBC=$(grep -i "sysroot_linux-64=" conda-reqs/chipyard-base.yaml | awk -F= '{print $2}' | awk '{print $1}')
+    REPO_GLIBC=$(git show HEAD:conda-reqs/chipyard-base.yaml 2>/dev/null | grep -i "sysroot_linux-64=" | awk -F= '{print $2}' | awk '{print $1}')
+    if [ -z "$REPO_GLIBC" ]; then
+        REPO_GLIBC="2.34"
+    fi
+
+    # Only switch sysroot version when that version is resolvable from active channels.
+    function sysroot_available
+    {
+        local version=$1
+        conda search --json \
+            --override-channels \
+            -c ucb-bar \
+            -c conda-forge \
+            -c litex-hub \
+            "sysroot_linux-64=${version}" >/dev/null 2>&1
+    }
+
+    if ! sysroot_available "$CURRENT_GLIBC"; then
+        warn "sysroot_linux-64=${CURRENT_GLIBC} is not available in current channels. Reverting to ${REPO_GLIBC}."
+        sed -i.bak "s/^\([[:space:]]*-\s*sysroot_linux-64=\).*/\1$REPO_GLIBC/" conda-reqs/chipyard-base.yaml
+        CURRENT_GLIBC="$REPO_GLIBC"
+    fi
+
+    if [ "$SYS_GLIBC" != "$CURRENT_GLIBC" ]; then
+        if sysroot_available "$SYS_GLIBC"; then
+            # replace the glibc version when it exists in channels
+            sed -i.bak "s/^\([[:space:]]*-\s*sysroot_linux-64=\).*/\1$SYS_GLIBC/" conda-reqs/chipyard-base.yaml
+            $CYDIR/scripts/generate-conda-lockfiles.sh
+            exit_if_last_command_failed
+        else
+            warn "Skipping sysroot_linux-64=${SYS_GLIBC} because it is unavailable in current channels; keeping ${CURRENT_GLIBC}."
+        fi
     fi
     echo "Using lockfile for conda: $LOCKFILE"
 
